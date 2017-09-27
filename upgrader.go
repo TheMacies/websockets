@@ -1,8 +1,7 @@
 package websockets
 
 import (
-	"crypto/sha1"
-	"encoding/base64"
+	"fmt"
 	"errors"
 	"net/http"
 )
@@ -20,41 +19,45 @@ var (
 	ErrBadUpgradeHeader          = errors.New("bad 'upgrade' header value - must be 'websocket'")
 	ErrBadWebsocketVersionHeader = errors.New("bad 'sec-websocket-version' header value - must be '13'")
 	ErrBadWebsocketKeyHeader     = errors.New("sec-websocket-key cannot be empty")
-)
-
-var (
-	AcceptHashAppend = []byte("258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
+	ErrHijackerNotSatisfied 	 = errors.New("response does not implement hijacker interface")
+	ErrBufferNotEmpty 			 = errors.New("cliend sent data before handshake")
 )
 
 func (upg *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request) (*Connection, error) {
 	if r.Method != "GET" {
-		w.WriteHeader(http.StatusBadRequest)
 		return nil, ErrBadMethod
 	}
 	if r.Header.Get("connection") != "upgrade" {
-		w.WriteHeader(http.StatusBadRequest)
 		return nil, ErrBadConnectionHeader
 	}
 	if r.Header.Get("upgrade") != "websocket" {
-		w.WriteHeader(http.StatusBadRequest)
 		return nil, ErrBadUpgradeHeader
 	}
 	if r.Header.Get("sec-websocket-version") != "13" {
-		w.WriteHeader(http.StatusBadRequest)
 		return nil, ErrBadWebsocketVersionHeader
 	}
 	key := r.Header.Get("sec-websocket-key")
 	if len(key) == 0 {
-		w.WriteHeader(http.StatusBadRequest)
 		return nil, ErrBadWebsocketKeyHeader
 	}
 
-	key := getAcceptKey(key)
+	h,ok := w.(http.Hijacker)
+	if !ok {
+		return nil, ErrHijackerNotSatisfied
+	}
+	
+	netCon,buff,err := h.Hijack()
+	if err != nil {
+		return nil, fmt.Errorf("failed to hijack: %s",err.Error())
+	}
 
-	return nil, nil
+	if buff.Reader.Buffered() > 0 {
+		netCon.Close()
+		return nil, ErrBufferNotEmpty
+	}
+	
+	con := &Connection{con:netCon}
+	con.replyHandshake(key)
+	return con, nil
 }
 
-func getAcceptKey(key string) string {
-	sha := sha1.Sum(append([]byte(key), AcceptHashAppend...))
-	return base64.StdEncoding.EncodeToString(sha[:])
-}
