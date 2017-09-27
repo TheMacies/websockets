@@ -20,14 +20,16 @@ func (c *connection) Write([]byte) error {
 }
 
 func (c *connection) GetNextMessage() ([]byte, error) {
-	data := make([]byte, 0, 100)
 	for {
 		_, err := c.con.Read(c.rBuff)
 		if err != nil {
 			return nil, fmt.Errorf("Error reading from connection: %s", err.Error())
 		}
-		frame := DecodeFrame(c.rBuff)
+		frame, err := DecodeFrame(c.rBuff)
+		if err != nil {
+			return nil, fmt.Errorf("Error decoding frame: %s", err.Error())
+		}
+		fmt.Println(frame.payload)
 	}
-
 	return nil, nil
 }
