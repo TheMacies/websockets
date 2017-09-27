@@ -1,16 +1,22 @@
 package websockets
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
 	"net/http"
+	"time"
 )
 
 type Upgrader struct {
+	conf *Config
 }
 
-func NewUpgrader() *Upgrader {
-	return &Upgrader{}
+type Config struct {
+	handshakeTimeout time.Time
+}
+
+func NewUpgrader(conf *Config) *Upgrader {
+	return &Upgrader{conf: conf}
 }
 
 var (
@@ -19,11 +25,15 @@ var (
 	ErrBadUpgradeHeader          = errors.New("bad 'upgrade' header value - must be 'websocket'")
 	ErrBadWebsocketVersionHeader = errors.New("bad 'sec-websocket-version' header value - must be '13'")
 	ErrBadWebsocketKeyHeader     = errors.New("sec-websocket-key cannot be empty")
-	ErrHijackerNotSatisfied 	 = errors.New("response does not implement hijacker interface")
-	ErrBufferNotEmpty 			 = errors.New("cliend sent data before handshake")
+	ErrHijackerNotSatisfied      = errors.New("response does not implement hijacker interface")
+	ErrBufferNotEmpty            = errors.New("cliend sent data before handshake")
 )
 
-func (upg *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request) (*Connection, error) {
+var (
+	DefaultSubprotocols = []string{}
+)
+
+func (upg *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request) (Connection, error) {
 	if r.Method != "GET" {
 		return nil, ErrBadMethod
 	}
@@ -41,23 +51,31 @@ func (upg *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request) (*Connectio
 		return nil, ErrBadWebsocketKeyHeader
 	}
 
-	h,ok := w.(http.Hijacker)
+	h, ok := w.(http.Hijacker)
 	if !ok {
 		return nil, ErrHijackerNotSatisfied
 	}
-	
-	netCon,buff,err := h.Hijack()
+
+	netCon, buff, err := h.Hijack()
 	if err != nil {
-		return nil, fmt.Errorf("failed to hijack: %s",err.Error())
+		return nil, fmt.Errorf("failed to hijack: %s", err.Error())
 	}
 
 	if buff.Reader.Buffered() > 0 {
 		netCon.Close()
 		return nil, ErrBufferNotEmpty
 	}
-	
-	con := &Connection{con:netCon}
-	con.replyHandshake(key)
-	return con, nil
-}
 
+	handshakeString := "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept:" + getAcceptKey(key) + "\r\n"
+	//Tutaj dodac subprotocole
+	handshakeString = handshakeString + "\r\n"
+	netCon.SetWriteDeadline(upg.conf.handshakeTimeout)
+	_, err = netCon.Write([]byte(handshakeString))
+	if err != nil {
+		netCon.Close()
+		return nil, fmt.Errorf("failed to perform handshake: %s", err.Error())
+	}
+
+	netCon.SetDeadline(time.Time{})
+	return &connection{con: netCon}, nil
+}
