@@ -67,7 +67,7 @@ func (upg *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request) (Connection
 	}
 
 	handshakeString := "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept:" + getAcceptKey(key) + "\r\n"
-	//Tutaj dodac subprotocole
+	// Subprotocols come here
 	handshakeString = handshakeString + "\r\n"
 	netCon.SetWriteDeadline(upg.conf.handshakeTimeout)
 	_, err = netCon.Write([]byte(handshakeString))
@@ -77,5 +77,5 @@ func (upg *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request) (Connection
 	}
 
 	netCon.SetDeadline(time.Time{})
-	return &connection{con: netCon}, nil
+	return &connection{con: netCon, isServer: true}, nil
 }

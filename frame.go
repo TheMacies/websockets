@@ -7,7 +7,7 @@ import (
 
 type frame struct {
 	finFlag  bool //Flag set if this frame is the last one in a message
-	OpCode   byte
+	OpCode   int
 	payload  []byte
 	maskUsed bool
 	mask     []byte
@@ -17,7 +17,20 @@ var (
 	ErrInvalidMessage = errors.New("got invalid message")
 )
 
-func DecodeFrame(data []byte) (*frame, error) {
+//OpCodes
+const (
+	Continuation = 0x0
+	Text         = 0x1
+	Binary       = 0x2
+	Ping         = 0x9
+	Pong         = 0xA
+)
+
+func encodeFrame(fr *frame) ([]byte, error) {
+	return nil, nil
+}
+
+func decodeFrame(data []byte) (*frame, error) {
 	if len(data) < 2 {
 		return nil, ErrInvalidMessage
 	}
@@ -26,7 +39,7 @@ func DecodeFrame(data []byte) (*frame, error) {
 	fr := &frame{}
 	fr.finFlag = data[0]&0x80 != 0
 
-	fr.OpCode = data[0] & 0xF
+	fr.OpCode = int(data[0] & 0xF)
 	fr.maskUsed = data[1]&0x80 != 0
 	payloadLen := uint64(data[1] & 0x7F)
 
