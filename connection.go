@@ -34,7 +34,7 @@ func (c *connection) WriteBinary(payload []byte) error {
 	return c.write(payload, Binary)
 }
 
-func (c *connection) write(payload []byte, opCode int) error {
+func (c *connection) write(payload []byte, opCode byte) error {
 	var err error
 	parts := c.dividePayload(payload)
 	encodeFrames := make([][]byte, len(parts))
@@ -101,21 +101,6 @@ func (c *connection) sendPong(data []byte) error {
 	data[0] = (data[0] & zeroOpcodeMask) + Pong
 	_, err := c.con.Write(data)
 	return err
-}
-
-func (c *connection) calculateFrameSize(payload []byte) int {
-	size := 2 // FIN , RSV, opCode, mask bit , basic payload len
-	if !c.isServer {
-		size += 4 // mask must be included
-	}
-	switch {
-	case len(payload) == 127 || len(payload) >= 1<<16:
-		size += 8
-	case len(payload) == 126 || len(payload) >= 1<<6:
-		size += 2
-	}
-	size += len(payload)
-	return size
 }
 
 func (c *connection) dividePayload(payload []byte) [][]byte {
