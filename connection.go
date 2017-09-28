@@ -15,7 +15,7 @@ const (
 )
 
 type Connection interface {
-	WriteText([]byte) error
+	WriteText(string) error
 	WriteBinary([]byte) error
 	GetNextMessage() ([]byte, error)
 }
@@ -36,7 +36,6 @@ func (c *connection) WriteBinary(payload []byte) error {
 }
 
 func (c *connection) write(payload []byte, opCode byte) error {
-	var err error
 	parts := c.dividePayload(payload)
 	encodeFrames := make([][]byte, len(parts))
 	for i := range parts {
