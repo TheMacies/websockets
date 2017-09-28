@@ -15,7 +15,8 @@ const (
 )
 
 type Connection interface {
-	Write([]byte) error
+	WriteText([]byte) error
+	WriteBinary([]byte) error
 	GetNextMessage() ([]byte, error)
 }
 
