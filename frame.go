@@ -24,10 +24,10 @@ func DecodeFrame(data []byte) (*frame, error) {
 
 	currentBytesRead := 2
 	fr := &frame{}
-	fr.finFlag = data[0]&0x80 == 1
+	fr.finFlag = data[0]&0x80 != 0
 
 	fr.OpCode = data[0] & 0xF
-	fr.maskUsed = data[1]&0x80 == 1
+	fr.maskUsed = data[1]&0x80 != 0
 	payloadLen := uint64(data[1] & 0x7F)
 
 	switch payloadLen {
