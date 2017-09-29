@@ -41,7 +41,7 @@ func encodeFrame(fr *frame) ([]byte, error) {
 		encoded[1] = 1 << 7
 	}
 	payloadLen := len(fr.payload)
-	currentByte := 2
+	currentByte := 1
 	switch {
 	case payloadLen < 126:
 		encoded[1] += byte(payloadLen)
@@ -65,6 +65,7 @@ func encodeFrame(fr *frame) ([]byte, error) {
 			currentByte++
 		}
 	}
+
 	copy(encoded[currentByte:], fr.payload)
 	return encoded, nil
 }
