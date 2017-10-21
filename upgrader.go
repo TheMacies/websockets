@@ -12,7 +12,7 @@ type Upgrader struct {
 }
 
 type Config struct {
-	handshakeTimeout time.Time
+	HandshakeTimeout time.Time
 }
 
 func NewUpgrader(conf *Config) *Upgrader {
@@ -70,7 +70,7 @@ func (upg *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request) (Connection
 	handshakeString := "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept:" + getAcceptKey(key) + "\r\n"
 	// Subprotocols here , but not supported :(((((((
 	handshakeString = handshakeString + "\r\n"
-	netCon.SetWriteDeadline(upg.conf.handshakeTimeout)
+	netCon.SetWriteDeadline(upg.conf.HandshakeTimeout)
 	_, err = netCon.Write([]byte(handshakeString))
 	if err != nil {
 		netCon.Close()
