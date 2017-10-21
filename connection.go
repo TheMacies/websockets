@@ -104,9 +104,9 @@ func (c *connection) sendPong(data []byte) error {
 }
 
 func (c *connection) dividePayload(payload []byte) [][]byte {
-	maxPayloadSize := c.DefaultMaxPayloadSizePerFrame
+	maxPayloadSize := c.maxPayloadPerFrame
 	if maxPayloadSize <= 0 {
-		maxPayloadSize = DefaultMaxPayloadSize
+		maxPayloadSize = DefaultMaxPayloadSizePerFrame
 	}
 
 	partsCount := len(payload) / maxPayloadSize
