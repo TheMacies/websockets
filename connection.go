@@ -11,7 +11,7 @@ var (
 )
 
 const (
-	DefaultMaxPayloadSizePerFrame = 10000
+	DefaultMaxPayloadSizePerFrame = 100000
 )
 
 type Connection interface {
@@ -67,7 +67,6 @@ func (c *connection) write(payload []byte, opCode byte) error {
 func (c *connection) GetNextMessage() ([]byte, error) {
 	result := []byte{}
 	for {
-		c.rBuff = c.rBuff[:0]
 		_, err := c.con.Read(c.rBuff)
 		if err != nil {
 			return nil, fmt.Errorf("Error reading from connection: %s", err.Error())

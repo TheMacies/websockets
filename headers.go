@@ -7,7 +7,7 @@ import (
 
 func headerContainsValue(headers http.Header, key, value string) bool {
 	valueFound := false
-	for _, headerValue := range headers[value] {
+	for _, headerValue := range headers[key] {
 		for {
 			headerValue = strings.TrimLeft(headerValue, " \t\r\n")
 			if headerValue == "" {

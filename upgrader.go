@@ -38,13 +38,13 @@ func (upg *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request) (Connection
 	if r.Method != "GET" {
 		return nil, ErrBadMethod
 	}
-	if !headerContainsValue(r.Header, "connection", "upgrade") {
+	if !headerContainsValue(r.Header, "Connection", "upgrade") {
 		return nil, ErrBadConnectionHeader
 	}
-	if !headerContainsValue(r.Header, "upgrade", "websocket") {
+	if !headerContainsValue(r.Header, "Upgrade", "websocket") {
 		return nil, ErrBadUpgradeHeader
 	}
-	if !headerContainsValue(r.Header, "sec-websocket-version", "13") {
+	if !headerContainsValue(r.Header, "Sec-Websocket-Version", "13") {
 		return nil, ErrBadWebsocketVersionHeader
 	}
 	key := r.Header.Get("sec-websocket-key")
@@ -78,5 +78,5 @@ func (upg *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request) (Connection
 	}
 
 	netCon.SetDeadline(time.Time{})
-	return &connection{con: netCon, isServer: false, rBuff: make([]byte, 0, DefautConnectionBufferSize)}, nil
+	return &connection{con: netCon, isServer: true, rBuff: make([]byte, DefautConnectionBufferSize)}, nil
 }

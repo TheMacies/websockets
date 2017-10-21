@@ -114,7 +114,6 @@ func decodeFrame(data []byte) (*frame, error) {
 	if uint64(len(data)) < uint64(currentBytesRead)+payloadLen {
 		return nil, ErrInvalidMessage
 	}
-
 	fr.payload = make([]byte, payloadLen)
 	currUint := uint64(currentBytesRead)
 	for i := uint64(0); i < payloadLen; i++ {
