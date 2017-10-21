@@ -18,6 +18,7 @@ type Connection interface {
 	WriteText(string) error
 	WriteBinary([]byte) error
 	GetNextMessage() ([]byte, error)
+	Close() error
 }
 
 type connection struct {
@@ -123,4 +124,8 @@ func (c *connection) dividePayload(payload []byte) [][]byte {
 		}
 	}
 	return parts
+}
+
+func (c *connection) Close() error {
+	return c.con.Close()
 }
