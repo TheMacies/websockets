@@ -8,11 +8,12 @@ import (
 )
 
 var (
-	AcceptHashAppend = []byte("258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
+	//AcceptKeyHashAppend is RFC defined string that is supposed to be appended to every challange key before hashing it
+	AcceptKeyHashAppend = []byte("258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
 )
 
 func getAcceptKey(key string) string {
-	sha := sha1.Sum(append([]byte(key), AcceptHashAppend...))
+	sha := sha1.Sum(append([]byte(key), AcceptKeyHashAppend...))
 	return base64.StdEncoding.EncodeToString(sha[:])
 }
 

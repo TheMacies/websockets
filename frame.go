@@ -28,7 +28,7 @@ const (
 )
 
 func encodeFrame(fr *frame) ([]byte, error) {
-	frameSize := calculateFrameSize(fr.payload, fr.maskUsed)
+	frameSize := calculateFrameSize(len(fr.payload), fr.maskUsed)
 	if frameSize >= 1<<63 {
 		return nil, fmt.Errorf("payload to big, perhaps you should set lower payload per frame size limit")
 	}
@@ -75,13 +75,14 @@ func decodeFrame(data []byte) (*frame, error) {
 		return nil, ErrInvalidMessage
 	}
 
-	currentBytesRead := 2
 	fr := &frame{}
 	fr.finFlag = data[0]&0x80 != 0
 
 	fr.OpCode = data[0] & 0xF
 	fr.maskUsed = data[1]&0x80 != 0
 	payloadLen := uint64(data[1] & 0x7F)
+
+	currentBytesRead := 2
 
 	switch payloadLen {
 	case 0x40:
@@ -92,7 +93,7 @@ func decodeFrame(data []byte) (*frame, error) {
 			return nil, ErrInvalidMessage
 		}
 		payloadLen = binary.BigEndian.Uint64((data[currentBytesRead : currentBytesRead+8]))
-		currentBytesRead += 2
+		currentBytesRead += 8
 	case 0x3F:
 		if len(data) < currentBytesRead+2 {
 			return nil, ErrInvalidMessage
@@ -100,6 +101,7 @@ func decodeFrame(data []byte) (*frame, error) {
 		payloadLen = binary.BigEndian.Uint64((data[currentBytesRead : currentBytesRead+2]))
 		currentBytesRead += 2
 	}
+
 	if fr.maskUsed {
 		fr.mask = make([]byte, 4)
 		if len(data) < currentBytesRead+4 {
@@ -108,9 +110,11 @@ func decodeFrame(data []byte) (*frame, error) {
 		copy(fr.mask, data[currentBytesRead:currentBytesRead+4])
 		currentBytesRead += 4
 	}
+
 	if uint64(len(data)) < uint64(currentBytesRead)+payloadLen {
 		return nil, ErrInvalidMessage
 	}
+
 	fr.payload = make([]byte, payloadLen)
 	currUint := uint64(currentBytesRead)
 	for i := uint64(0); i < payloadLen; i++ {
@@ -122,17 +126,17 @@ func decodeFrame(data []byte) (*frame, error) {
 	return fr, nil
 }
 
-func calculateFrameSize(payload []byte, addMask bool) uint64 {
+func calculateFrameSize(payloadLen int, addMask bool) uint64 {
 	size := uint64(2) // FIN , RSV, opCode, mask bit , basic payload len
 	if addMask {
 		size += 4 // mask must be included
 	}
 	switch {
-	case len(payload) == 127 || len(payload) >= 1<<16:
+	case payloadLen == 127 || payloadLen >= 1<<16:
 		size += 8
-	case len(payload) == 126 || len(payload) >= 1<<6:
+	case payloadLen == 126 || payloadLen >= 1<<6:
 		size += 2
 	}
-	size += uint64(len(payload))
+	size += uint64(payloadLen)
 	return size
 }

@@ -11,7 +11,7 @@ var (
 )
 
 const (
-	DefaultMaxPayloadSize = 10000
+	DefaultMaxPayloadSizePerFrame = 10000
 )
 
 type Connection interface {
@@ -22,9 +22,9 @@ type Connection interface {
 
 type connection struct {
 	con                net.Conn
-	rBuff              []byte
-	isServer           bool
-	maxPayloadPerFrame int
+	rBuff              []byte // buffer for incoming messages
+	isServer           bool   // client is obliged to send masked messages while server should not
+	maxPayloadPerFrame int    // payload fragmentation
 }
 
 func (c *connection) WriteText(payload string) error {
@@ -37,7 +37,7 @@ func (c *connection) WriteBinary(payload []byte) error {
 
 func (c *connection) write(payload []byte, opCode byte) error {
 	parts := c.dividePayload(payload)
-	encodeFrames := make([][]byte, len(parts))
+	encodedFrames := make([][]byte, len(parts))
 	for i := range parts {
 		finFlag := false
 		if i == len(parts)-1 {
@@ -51,11 +51,11 @@ func (c *connection) write(payload []byte, opCode byte) error {
 		if err != nil {
 			return fmt.Errorf("error encoding frame: %s", err.Error())
 		}
-		encodeFrames[i] = enc
+		encodedFrames[i] = enc
 	}
 
-	for i := range encodeFrames {
-		_, err := c.con.Write(encodeFrames[i])
+	for i := range encodedFrames {
+		_, err := c.con.Write(encodedFrames[i])
 		if err != nil {
 			return fmt.Errorf("error sending frame: %s", err.Error())
 		}
@@ -105,13 +105,15 @@ func (c *connection) sendPong(data []byte) error {
 
 func (c *connection) dividePayload(payload []byte) [][]byte {
 	maxPayloadSize := c.maxPayloadPerFrame
-	if maxPayloadSize == 0 {
+	if maxPayloadSize <= 0 {
 		maxPayloadSize = DefaultMaxPayloadSize
 	}
+
 	partsCount := len(payload) / maxPayloadSize
 	if partsCount*maxPayloadSize != len(payload) {
 		partsCount++
 	}
+
 	parts := make([][]byte, 0, partsCount)
 	for i := 0; i < partsCount; i++ {
 		if i == partsCount-1 {

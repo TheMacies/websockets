@@ -21,29 +21,30 @@ func NewUpgrader(conf *Config) *Upgrader {
 
 var (
 	ErrBadMethod                 = errors.New("bad http method - GET required")
-	ErrBadConnectionHeader       = errors.New("bad 'connection' header value - must be 'upgrade'")
-	ErrBadUpgradeHeader          = errors.New("bad 'upgrade' header value - must be 'websocket'")
-	ErrBadWebsocketVersionHeader = errors.New("bad 'sec-websocket-version' header value - must be '13'")
+	ErrBadConnectionHeader       = errors.New("bad 'connection' header value - must contain 'upgrade'")
+	ErrBadUpgradeHeader          = errors.New("bad 'upgrade' header value - must contain 'websocket'")
+	ErrBadWebsocketVersionHeader = errors.New("bad 'sec-websocket-version' header value - must contain '13'")
 	ErrBadWebsocketKeyHeader     = errors.New("sec-websocket-key cannot be empty")
 	ErrHijackerNotSatisfied      = errors.New("response does not implement hijacker interface")
 	ErrBufferNotEmpty            = errors.New("cliend sent data before handshake")
 )
 
 var (
-	DefaultSubprotocols = []string{}
+	DefaultSubprotocols        = []string{}
+	DefautConnectionBufferSize = 10000
 )
 
 func (upg *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request) (Connection, error) {
 	if r.Method != "GET" {
 		return nil, ErrBadMethod
 	}
-	if r.Header.Get("connection") != "upgrade" {
+	if !headerContainsValue(r.Header, "connection", "upgrade") {
 		return nil, ErrBadConnectionHeader
 	}
-	if r.Header.Get("upgrade") != "websocket" {
+	if !headerContainsValue(r.Header, "upgrade", "websocket") {
 		return nil, ErrBadUpgradeHeader
 	}
-	if r.Header.Get("sec-websocket-version") != "13" {
+	if !headerContainsValue(r.Header, "sec-websocket-version", "13") {
 		return nil, ErrBadWebsocketVersionHeader
 	}
 	key := r.Header.Get("sec-websocket-key")
@@ -67,7 +68,7 @@ func (upg *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request) (Connection
 	}
 
 	handshakeString := "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept:" + getAcceptKey(key) + "\r\n"
-	// Subprotocols come here
+	// Subprotocols here , but not supported :(((((((
 	handshakeString = handshakeString + "\r\n"
 	netCon.SetWriteDeadline(upg.conf.handshakeTimeout)
 	_, err = netCon.Write([]byte(handshakeString))
@@ -77,5 +78,5 @@ func (upg *Upgrader) Upgrade(w http.ResponseWriter, r *http.Request) (Connection
 	}
 
 	netCon.SetDeadline(time.Time{})
-	return &connection{con: netCon, isServer: true}, nil
+	return &connection{con: netCon, isServer: false, rBuff: make([]byte, 0, DefautConnectionBufferSize)}, nil
 }
